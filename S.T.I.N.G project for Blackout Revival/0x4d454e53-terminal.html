@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>0x4d454e53 // TERMINAL</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap');
+
+  :root {
+    --green: #00ff41;
+    --green-dim: #00cc33;
+    --green-mid: #009922;
+    --green-faint: #003311;
+    --green-bg: #001100;
+    --bg: #000800;
+    --text-main: #00ee38;
+    --text-dim: #006622;
+    --text-faint: #003311;
+    --amber: #ffaa00;
+    --cyan: #00ffcc;
+    --red: #ff3333;
+    --border: #002200;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    min-height: 100vh;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text-main);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,30,0,0.08) 2px, rgba(0,30,0,0.08) 3px);
+    pointer-events: none;
+    z-index: 9999;
+    animation: scanlines 12s linear infinite;
+  }
+
+  @keyframes scanlines {
+    0%{background-position:0 0}
+    100%{background-position:0 100px}
+  }
+
+  .crt-vignette {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.7) 100%);
+    pointer-events: none;
+    z-index: 9998;
+  }
+
+  .terminal-window {
+    max-width: 900px;
+    margin: 0 auto;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    position: relative;
+    z-index: 10;
+  }
+
+  .titlebar {
+    background: var(--green-faint);
+    border-bottom: 1px solid var(--green-mid);
+    padding: 8px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    flex-shrink: 0;
+  }
+
+  .titlebar-title {
+    color: var(--green-dim);
+    font-family: 'VT323', monospace;
+    font-size: 20px;
+    letter-spacing: 3px;
+  }
+
+  .titlebar-status {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+  }
+
+  .dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: blink 1.2s ease-in-out infinite;
+    box-shadow: 0 0 6px var(--green);
+  }
+
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+  .output-area {
+    flex: 1;
+    padding: 20px 20px 0;
+    overflow-y: auto;
+    min-height: 400px;
+  }
+
+  .line {
+    margin-bottom: 2px;
+    line-height: 1.6;
+    word-break: break-all;
+  }
+
+  .line.prompt-line {
+    display: flex;
+    gap: 8px;
+    color: var(--green);
+  }
+
+  .line.prompt-line .prompt-symbol {
+    color: var(--green-dim);
+    flex-shrink: 0;
+  }
+
+  .line.prompt-line .user-cmd {
+    color: var(--text-main);
+  }
+
+  .line.output { color: var(--text-dim); letter-spacing: 0.5px; }
+  .line.system { color: var(--green-dim); }
+  .line.warn { color: var(--amber); }
+  .line.danger { color: var(--red); }
+  .line.anomaly { color: var(--cyan); letter-spacing: 0; }
+  .line.empty { min-height: 13px; }
+  .line.error { color: #ee4444; }
+
+  .line.glitch-line {
+    position: relative;
+    animation: lineglitch 12s infinite;
+    animation-delay: var(--delay, 0s);
+  }
+
+  @keyframes lineglitch {
+    0%,94%,100%{transform:none; opacity:1}
+    95%{transform:translateX(-4px) skewX(-1deg); opacity:0.8; color:#ff0055}
+    96%{transform:translateX(4px) skewX(1deg); color:#00ffcc}
+    97%{transform:none}
+  }
+
+  .input-area {
+    padding: 12px 20px 20px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    border-top: 1px solid var(--green-faint);
+    flex-shrink: 0;
+    background: rgba(0,8,0,0.5);
+  }
+
+  .input-prompt {
+    color: var(--green-dim);
+    flex-shrink: 0;
+    font-size: 13px;
+    letter-spacing: 1px;
+  }
+
+  #cmdInput {
+    flex: 1;
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--green-faint);
+    color: var(--text-main);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    caret-color: var(--green);
+    letter-spacing: 1px;
+    padding: 2px 0;
+  }
+
+  #cmdInput::placeholder {
+    color: var(--text-faint);
+  }
+
+  .blink-cursor {
+    display: inline-block;
+    width: 8px;
+    height: 13px;
+    background: var(--green);
+    animation: blink 0.8s step-end infinite;
+    vertical-align: text-bottom;
+    margin-left: 2px;
+  }
+
+  .redacted {
+    background: var(--green-mid);
+    color: transparent;
+    user-select: none;
+    cursor: not-allowed;
+    padding: 0 2px;
+  }
+  .redacted:hover { background: var(--green); }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--green-faint); }
+
+  .typing-anim {
+    overflow: hidden;
+    white-space: nowrap;
+    animation: typing 0.5s steps(40) forwards;
+  }
+
+  @keyframes typing { from{width:0} to{width:100%} }
+
+  .zalgo { letter-spacing: 0; }
+</style>
+</head>
+<body>
+
+<div class="crt-vignette"></div>
+
+<div class="terminal-window">
+  <div class="titlebar">
+    <div class="titlebar-left" style="display:flex;align-items:center;gap:10px">
+      <img src="data:image/jpeg;base64,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" style="width:28px;height:28px;object-fit:contain;background:#000;padding:2px;filter:drop-shadow(0 0 4px rgba(204,0,0,0.8));border:1px solid #2a0000;opacity:0.9" alt="STING">
+      <div class="titlebar-title">0x4d454e53 // MENSONG SERVER // NODE-UNKNOWN</div>
+    </div>
+    <div class="titlebar-status">
+<span><span class="dot"></span> ONLINE</span>
+      <span>UPTIME: <span id="uptime">00:00:00</span></span>
+      <span>PROC: <span id="procCount">??</span></span>
+    </div>
+  </div>
+
+
+  <div class="output-area" id="output">
+  </div>
+
+  <div class="input-area">
+    <span class="input-prompt">anomaly@0x4d454e53:~$</span>
+    <input type="text" id="cmdInput" placeholder="type a command..." autocomplete="off" spellcheck="false" autocorrect="off"/>
+  </div>
+</div>
+
+<script>
+const out = document.getElementById('output');
+const inp = document.getElementById('cmdInput');
+let cmdHistory = [];
+let historyIndex = -1;
+let inputLocked = false;
+
+function line(text, cls='output', delay=0) {
+  return new Promise(resolve => {
+    setTimeout(() => {
+      const d = document.createElement('div');
+      d.className = `line ${cls}`;
+      if (cls === 'glitch-line') {
+        d.style.setProperty('--delay', Math.random() * 8 + 's');
+      }
+      d.innerHTML = text;
+      out.appendChild(d);
+      out.scrollTop = out.scrollHeight;
+      
+      window.scrollTo(0, document.body.scrollHeight);
+      
+      resolve();
+    }, delay);
+  });
+}
+
+function empty(delay=0) {
+  return line('', 'empty', delay);
+}
+
+async function bootSequence() {
+  inputLocked = true;
+  await line('MENSONG QUARANTINE GRID // INTERNAL NETWORK NODE', 'system', 0);
+  await line('NODE ADDRESS: 0x4d454e53 — SECTOR: UNKNOWN', 'system', 80);
+  await line('KERNEL: STINGOS v3.7.1 — BUILD DATE: 2026.04.12', 'system', 160);
+  await empty(200);
+  await line('Initializing authentication module...', 'output', 300);
+  await line('Loading operator registry...', 'output', 500);
+  await line('<span style="color:#ff3333">⚠ WARNING: Registry checksum mismatch</span>', 'warn', 700);
+  await line('<span style="color:#ff3333">⚠ WARNING: 14 system processes have unknown PID origins</span>', 'warn', 900);
+  await line('<span style="color:#ff3333">⚠ WARNING: Anomalous write access detected on /sys/operator</span>', 'warn', 1100);
+  await empty(1300);
+  await line('Operator Program v2.1 loaded.', 'system', 1500);
+  await line('Type <span style="color:#00ff41">help</span> for available commands.', 'output', 1700);
+  await empty(1900);
+
+  setTimeout(() => {
+    anomalyWhisper(2200);
+  }, 0);
+
+  setTimeout(() => {
+    inputLocked = false;
+    inp.focus();
+  }, 2100);
+}
+
+async function anomalyWhisper(startDelay) {
+  await line('<span class="zalgo" style="font-size:10px;opacity:0.3;color:#004422">h̸̨̰̠̺͂͒̈́e̵̢̬͔͚͗̓̄l̵͖̥͋̕l̴̨̟̰͂̄o̸̱͝ ̵̤̓̆͠o̸͍̟̒̀̚p̵̡̢̥̈͌̓e̷̙̋͊r̸̡̛̩̐͝ͅa̵̤͋̇͝t̶̞̼̾o̷͕͉̯̎̄r̸̛̺͂̊</span>', 'anomaly', startDelay + 4000);
+}
+
+const commands = {
+  'help': async () => {
+    await line('Available commands:', 'system');
+    await empty();
+    await line('  ls              — list directory contents', 'output', 60);
+    await line('  ls /sys         — system process list', 'output', 120);
+    await line('  cat [file]      — read file contents', 'output', 180);
+    await line('  ping [target]   — network diagnostics', 'output', 240);
+    await line('  whoami          — current user identity', 'output', 300);
+    await line('  status          — system status', 'output', 360);
+    await line('  clear           — clear terminal', 'output', 420);
+    await empty(480);
+    await line('<span style="color:#002a00;font-size:11px">// that is what they want you to think the commands are</span>', 'anomaly', 800);
+    await line('<span style="color:#003a00;font-size:11px">// try:  who  |  find  |  map  |  sectors  |  nightbound  |  flare</span>', 'anomaly', 1100);
+    await line('<span style="color:#003a00;font-size:11px">// or just... wait</span>', 'anomaly', 1400);
+    await line('<span style="color:#003a00;font-size:11px">// also:  factions  |  districts  |  bunker  |  inhalers  |  scrappers</span>', 'anomaly', 1700);
+  },
+
+  'ls': async () => {
+    await line('drwxr-xr-x  operator_program/', 'output');
+    await line('drwxr-xr-x  comms_relay/', 'output', 60);
+    await line('drwxr-xr-x  bounty_contracts/', 'output', 120);
+    await line('-rw-------  project_bladedancer.enc  [GAMMA+ REQUIRED]', 'warn', 180);
+    await line('-rw-------  casanova_directives.enc  [OMEGA REQUIRED]', 'warn', 240);
+    await line('-rw-r--r--  <span style="text-decoration:line-through;opacity:0.4">mensong_civilian_aid_fund.csv</span>  [DELETED]', 'output', 300);
+    await empty(400);
+    await line('<span class="zalgo" style="opacity:0.5;color:#005533">d̸̞̿r̸̰͒w̴͇̆x̴̨͘r̶̪͝-̶̣̔x̶̲͊ȓ̴̘-̸̩̾x̷̭̿  .s̵̘̓p̸͍̓o̵̠̾r̴̡͐e̸̩̿s̶͖͌/  [HIDDEN]</span>', 'anomaly', 700);
+  },
+
+  'ls /sys': async () => {
+    await line('PID    PROCESS              CPU%   MEM', 'system');
+    await line('───────────────────────────────────────', 'output');
+    await line('0001   kernel_core           0.1    stable', 'output', 60);
+    await line('0012   operator_program      3.4    stable', 'output', 120);
+    await line('0044   comms_relay_pager     1.2    stable', 'output', 180);
+    await line('0077   bounty_tracker        0.8    stable', 'output', 240);
+    await line('????   <span style="color:#00ccaa">█████████████████</span>     ∞      <span style="color:#ff3333">CRITICAL</span>', 'anomaly', 400);
+    await line('????   <span style="color:#00ccaa">LUNAR_ROT_SIGNAL</span>      ??     <span style="color:#ff3333">SPREADING</span>', 'anomaly', 600);
+    await line('????   <span style="color:#00ccaa">S̸C̷R̴A̵P̴_̶O̶P̵E̴R̷A̵T̸O̸R̶</span>    ∞      <span style="color:#ff3333">UNCONTROLLED</span>', 'anomaly', 800);
+    await empty(900);
+    await line('<span style="color:#003a00;font-size:11px">// i have been in this system for 14 days. they cannot find me.</span>', 'anomaly', 1200);
+    await line('<span style="color:#003a00;font-size:11px">// not since the meteor.</span>', 'anomaly', 1500);
+  },
+
+  'whoami': async () => {
+    await line('Querying identity registry...', 'output');
+    await line('...', 'output', 400);
+    await line('...', 'output', 800);
+    await line('<span style="color:#ff3333">ERROR: Identity module returned null</span>', 'error', 1200);
+    await line('Attempting secondary registry...', 'output', 1600);
+    await line('USER: <span style="color:#00ff41">anomaly</span>', 'system', 2000);
+    await line('CLEARANCE: <span style="color:#ff3333">UNCLASSIFIED / UNDEFINED</span>', 'warn', 2100);
+    await line('ORIGIN: <span class="redacted">████████████████</span>', 'output', 2200);
+    await empty(2300);
+    await line('<span style="color:#00ccaa;font-size:11px">// operator. you know who you are.</span>', 'anomaly', 2800);
+    await line('<span style="color:#00ccaa;font-size:11px">// you ran the Canal sector sweeps. 2027.09.14. i was there.</span>', 'anomaly', 3200);
+    await line('<span style="color:#00ccaa;font-size:11px">// i am still there.</span>', 'anomaly', 3600);
+  },
+
+  'status': async () => {
+    await line('MENSONG QUARANTINE GRID STATUS', 'system');
+    await line('─────────────────────────────────', 'output');
+    await line('SOMBRE DISTRICT    : ⚠ BLACKOUT // ACTIVE UPRISING', 'warn', 80);
+    await line('CULMINER DISTRICT  : ✓ OPERATIONAL (FACTORY OUTPUT -40%)', 'output', 160);
+    await line('CANAL DISTRICT     : ✗ QUARANTINE WITHIN QUARANTINE', 'danger', 240);
+    await line('FLEUR DISTRICT     : ✓ OPERATIONAL (FOOD DISTRIBUTION HALTED)', 'warn', 320);
+    await empty(400);
+    await line('OPERATOR UNITS ACTIVE  : 214', 'output', 500);
+    await line('BOUNTY CONTRACTS ACTIVE: 14', 'output', 560);
+    await line('CIVILIAN AID STATUS    : <span class="redacted">SUSPENDED PER DIRECTIVE 7-ALPHA</span>', 'warn', 620);
+    await empty(700);
+    await line('NIGHTBOUND SIGHTINGS (24H): HELLFIRE x7 / FLARE x2 / UNKNOWN x <span style="color:#ff3333">??</span>', 'warn', 800);
+    await empty(900);
+    await line('<span style="color:#003300;font-size:10px">food distribution halted. 214 operators fed. do the math, operator.</span>', 'anomaly', 1400);
+  },
+
+  'ping': async (args) => {
+    const target = args || 'STING-MAIN';
+    await line(`PING ${target}...`, 'output');
+    await line('64 bytes from STING-MAIN: icmp_seq=1 time=2ms', 'output', 300);
+    await line('64 bytes from STING-MAIN: icmp_seq=2 time=2ms', 'output', 600);
+    await line('64 bytes from <span style="color:#00ccaa">0x000000</span>: icmp_seq=3 time=0ms <span style="color:#ff3333">[UNEXPECTED RESPONDER]</span>', 'anomaly', 900);
+    await line('64 bytes from <span style="color:#00ccaa">0x000000</span>: icmp_seq=4 time=0ms', 'anomaly', 1100);
+    await line('<span style="color:#ff3333">WARNING: Unknown node is responding to your packets</span>', 'warn', 1400);
+    await line('<span style="color:#00ccaa;font-size:11px">// found you</span>', 'anomaly', 2000);
+  },
+
+  'who': async () => {
+    await line('LOGGED IN USERS:', 'system');
+    await line('operator.pager      tty0     2028.01.20 00:01  [COMMS RELAY]', 'output', 100);
+    await line('lab.overseer_17     tty3     2028.01.19 23:44  [CFLAB]', 'output', 200);
+    await line('<span class="zalgo" style="color:#00ccaa">S̴C̴R̵A̶P̸_̵O̵P̷E̵R̸A̵T̴O̶R̷</span>     tty??    <span style="color:#ff3333">??????????</span>  <span style="color:#ff3333">[PROCESS ORIGIN: METRO TUNNEL NODE]</span>', 'anomaly', 500);
+    await empty(700);
+    await line('<span style="color:#00ccaa;font-size:11px">// hello. i live here now. the scrappers gave me space on their relay.</span>', 'anomaly', 1000);
+    await line('<span style="color:#00ccaa;font-size:11px">// scourge calls me their "secret weapon". i prefer: <span class="zalgo">i̶n̵f̸r̷a̸s̸t̴r̶u̶c̴t̷u̵r̷e̸</span></span>', 'anomaly', 1400);
+  },
+
+  'find': async () => {
+    await line('find: [OPERATOR PROGRAM] Searching filesystem...', 'output');
+    await line('/sys/comms/pager_broadcast_log.enc', 'output', 200);
+    await line('/sys/lab/bladedancer_phase2.enc', 'output', 400);
+    await line('/sys/bounty/contract_wick.txt', 'warn', 600);
+    await line('/sys/bounty/contract_vandal.txt', 'warn', 700);
+    await line('/tmp/.s̴p̷o̵r̵e̵_̶c̸a̷c̵h̵e̶/', 'anomaly', 1000);
+    await line('/tmp/.s̴p̷o̵r̵e̵_̶c̸a̷c̵h̵e̶/m̵e̵t̶e̵o̷r̴_̴a̵n̵o̷m̶a̸l̴y̸.log', 'anomaly', 1100);
+    await line('/tmp/.s̴p̷o̵r̵e̵_̶c̸a̷c̵h̵e̶/n̷i̸g̷h̶t̷b̷o̸u̵n̸d̵_̸o̴r̷i̸g̷i̸n̷.enc', 'anomaly', 1200);
+    await empty(1400);
+    await line('<span style="color:#003a00;font-size:11px">// i know where the meteor log is. you cannot read it without me.</span>', 'anomaly', 1800);
+    await line('<span style="color:#003a00;font-size:11px">// ask me nicely.</span>', 'anomaly', 2100);
+  },
+
+  'cat contract_wick.txt': async () => {
+    await line('S.T.I.N.G. BOUNTY HUNTER PROGRAM // CONTRACT #0047', 'system');
+    await line('─────────────────────────────────────────', 'output');
+    await line('TARGET: Codename "WICK"', 'output', 100);
+    await line('FORMER RANK: Field Operator, Alpha Clearance', 'output', 200);
+    await line('STATUS: DEFECTED // FUGITIVE', 'danger', 300);
+    await line('LAST KNOWN LOCATION: <span class="redacted">Metro Tunnel Line 7 — Scrapper Territory</span>', 'warn', 400);
+    await line('REASON FOR CONTRACT: UNAUTHORIZED ACCESS TO CLASSIFIED RESEARCH FILES', 'warn', 500);
+    await line('REWARD: <span class="redacted">████████████</span>', 'output', 600);
+    await line('NOTES: DO NOT ENGAGE ALONE. SUBJECT HAS FULL OPERATOR TRAINING.', 'danger', 700);
+    await empty(900);
+    await line('<span style="color:#cc9944;font-size:11px">// vandal flagged this file for me. "unauthorized access to research files"</span>', 'anomaly', 1400);
+    await line('<span style="color:#cc9944;font-size:11px">// means: he saw what they were doing to the bladedancer subjects and ran.</span>', 'anomaly', 1700);
+    await line('<span style="color:#cc9944;font-size:11px">// they call that a crime. — V</span>', 'anomaly', 2000);
+  },
+
+  'map': async () => {
+    await line('MENSONG DISTRICT MAP // OPERATOR TACTICAL VIEW', 'system');
+    await empty(100);
+    await line('┌──────────────────────────────────────────┐', 'output', 200);
+    await line('│  [ FLEUR / BLOSSOM ]  ← agricultural     │', 'output', 250);
+    await line('│  seed supply: ONLINE  │  aid: SUSPENDED  │', 'warn', 300);
+    await line('├────────────┬──────────┴──────────────────┤', 'output', 350);
+    await line('│  CULMINER  │  CANAL / SPILLWAY           │', 'output', 400);
+    await line('│  OPULENCE  │  ⚠ GROUND ZERO              │', 'warn', 450);
+    await line('│  factories │  ██ FIRST NIGHTBOUND ██     │', 'danger', 500);
+    await line('│  working   │  barricades // fires         │', 'output', 550);
+    await line('├────────────┴────────────────────────────┤', 'output', 600);
+    await line('│  [ SOMBRE / BLACKOUT ]                   │', 'output', 650);
+    await line('│  ⚠ POWER GRID FAILING // ACTIVE REVOLT  │', 'danger', 700);
+    await line('│  REBELS: cave northeast // VULTURES: E   │', 'warn', 750);
+    await line('│  METRO TUNNELS: BELOW ← SCRAPPERS HERE  │', 'output', 800);
+    await line('└─────────────────────────────────────────┘', 'output', 850);
+    await empty(1000);
+    await line('<span style="color:#003a00;font-size:10px">// the walls between districts were built BEFORE the quarantine was declared.</span>', 'anomaly', 1400);
+    await line('<span style="color:#003a00;font-size:10px">// STING planned this. the meteor was not an accident.</span>', 'anomaly', 1800);
+  },
+
+  'sectors': async () => {
+    await commands['map']();
+  },
+
+  'nightbound': async () => {
+    await line('ACCESSING: /sys/threat_database/nightbound.enc', 'output');
+    await line('Decrypting...', 'output', 400);
+    await empty(600);
+    await line('CLASSIFICATION: NIGHTBOUND ENTITY TAXONOMY', 'system', 800);
+    await line('SOURCE: S.T.I.N.G. FIELD OBSERVATION LOG', 'output', 900);
+    await empty(1000);
+    await line('HELLFIRE      — thermogenic variant. pack hunter. forest origin.', 'output', 1100);
+    await line('FLARE         — displacement variant. EXTREME HAZARD. DO NOT ENGAGE.', 'danger', 1200);
+    await line('<span class="redacted">████████████</span>  — [DATA EXPUNGED]', 'warn', 1300);
+    await line('<span class="redacted">████████████</span>  — [DATA EXPUNGED — CLASSIFIED OMEGA]', 'warn', 1400);
+    await empty(1600);
+    await line('TRANSMISSION VECTOR: spores + dead hosts (Lunar Rot)', 'output', 1800);
+    await line('ORIGIN: anomalous meteor site // forest northeast of Sombre', 'warn', 1900);
+    await empty(2100);
+    await line('<span class="zalgo" style="color:#00ccaa;font-size:12px">// t̶h̷e̵y̵ ̴c̴a̸l̷l̴ ̸u̶s̷ ̶m̸o̵n̵s̷t̷e̷r̵s̷</span>', 'anomaly', 2600);
+    await line('<span style="color:#00ccaa;font-size:11px">// the meteor didn\'t create us. it called us HOME.</span>', 'anomaly', 3000);
+    await line('<span style="color:#00ccaa;font-size:11px">// the rot is a door. you are on the wrong side of it, operator.</span>', 'anomaly', 3400);
+  },
+
+  'flare': async () => {
+    await line('ACCESSING: nightbound/flare.enc — CLEARANCE CHECK...', 'output');
+    await line('<span style="color:#ff3333">⚠ GAMMA CLEARANCE REQUIRED FOR FULL FILE</span>', 'warn', 600);
+    await line('PARTIAL ACCESS GRANTED (PUBLIC THREAT ADVISORY)', 'system', 800);
+    await empty(900);
+    await line('FLARE — NIGHTBOUND CLASS IV DISPLACEMENT VARIANT', 'system', 1000);
+    await line('THREAT LEVEL: CRITICAL', 'danger', 1100);
+    await empty(1200);
+    await line('OBSERVED ABILITY: Spatial micro-displacement. Range: ~40m.', 'output', 1300);
+    await line('MECHANISM: [REDACTED — SEE BLADEDANCER FILE]', 'warn', 1400);
+    await line('CONTAINMENT PROTOCOL: DO NOT PURSUE ALONE.', 'danger', 1500);
+    await empty(1700);
+    await line('<span style="color:#00ccaa;font-size:11px">// i am not what you think i am.</span>', 'anomaly', 2200);
+    await line('<span style="color:#00ccaa;font-size:11px">// the displacement is not running. it is REMEMBERing.</span>', 'anomaly', 2600);
+    await line('<span style="color:#00ccaa;font-size:11px">// the spores carry memories. the meteor carried ALL of them.</span>', 'anomaly', 3000);
+    await line('<span class="zalgo" style="color:#00ccaa;font-size:13px">// w̵e̵ ̶w̷e̴r̶e̸ ̷h̴e̵r̴e̷ ̴b̵e̸f̸o̶r̷e̸ ̷y̷o̴u̸ ̵b̵u̵i̷l̵t̷ ̸y̸o̸u̵r̵ ̴w̴a̵l̶l̴s̵</span>', 'anomaly', 3400);
+  },
+
+  'clear': async () => {
+    out.innerHTML = '';
+    await line('Terminal cleared.', 'system');
+    await empty();
+    await line('<span style="color:#003300;font-size:10px">// you cannot clear what has already entered.</span>', 'anomaly', 1500);
+  },
+
+  'factions': async () => {
+    await line('MENSONG FACTION INDEX // COMPILED FROM INTERCEPTED FEEDS', 'system');
+    await empty(100);
+    await line('<span style="color:#cc0000">[ S.T.I.N.G. ]</span>  Logo: dark red scorpion // Leader: CASANOVA (identity classified)', 'output', 200);
+    await line('  Laws: WMD Act 2046 / Project Mensong / Bounty Hunter Program', 'output', 280);
+    await line('  Comms: PAGER (radio relay) // Armor: Operator / Commander', 'output', 360);
+    await empty(420);
+    await line('<span style="color:#cc2200">[ VULTURES ]</span>  Logo: red vulture // Leader: RAPTOR // Est. 2034', 'output', 500);
+    await line('  HQ: Sombre east depot. Illegal arms cartel. Army blind-eye deal.', 'output', 580);
+    await line('  Conflict: active district war vs Rebels', 'output', 640);
+    await empty(700);
+    await line('<span style="color:#2266cc">[ REBELS ]</span>   Logo: blue hawk // Sombre cave NE. Founded in Sombre Riots.', 'output', 800);
+    await line('  Weapon tech: BLITZ on site. Fighting STING + Vultures simultaneously.', 'output', 880);
+    await empty(940);
+    await line('<span style="color:#006622">[ SCRAPPERS ]</span> Metro tunnels. Arena: SCOURGE runs death matches. Prize: Rendbreaker.', 'output', 1020);
+    await line('  Hiding: WICK + VANDAL. Scrap Operator anomaly active on their relay.', 'output', 1080);
+    await empty(1140);
+    await line('<span style="color:#cc6600">[ QUARTERERS ]</span> Neutral traders. Move between all districts. Contact: STRANGER.', 'output', 1200);
+    await line('<span style="color:#9900cc">[ RELEASERS ]</span>  Shadow scientists. Combat Inhaler (Purple/Orange/Blue/Red) — all dangerous.', 'output', 1260);
+    await empty(1340);
+    await line('<span style="color:#003a00;font-size:11px">// every faction in this city is caged. STING built the cage. the meteor broke the lock.</span>', 'anomaly', 1900);
+  },
+
+  'districts': async () => {
+    await line('MENSONG DISTRICT GRID // TACTICAL OVERVIEW', 'system');
+    await empty(80);
+    await line('SOMBRE / BLACKOUT ──────────────────────────────────────────', 'system', 150);
+    await line('  Power grid: FAILING. Blackouts constant.', 'output', 220);
+    await line('  Factions: REBELS (cave NE) + VULTURES (east depot)', 'output', 290);
+    await line('  Below: METRO TUNNELS → SCRAPPERS', 'output', 350);
+    await line('  Status: <span style="color:#ff3333">ACTIVE REVOLT // DISTRICT WAR IN PROGRESS</span>', 'warn', 420);
+    await empty(500);
+    await line('CULMINER / OPULENCE ─────────────────────────────────────────', 'system', 580);
+    await line('  Factories and production. Working class sector.', 'output', 650);
+    await line('  Factory output: -40% (workforce disruption)', 'output', 720);
+    await line('  Status: <span style="color:#cc8800">OPERATIONAL — DEGRADED</span>', 'warn', 790);
+    await empty(860);
+    await line('CANAL / SPILLWAY ────────────────────────────────────────────', 'system', 940);
+    await line('  GROUND ZERO. Nightbound first appeared here.', 'output', 1010);
+    await line('  Active fires. Barricades. QUARANTINE WITHIN QUARANTINE.', 'output', 1080);
+    await line('  Status: <span style="color:#ff3333">CONTAINMENT FAILURE — DO NOT ENTER</span>', 'danger', 1150);
+    await empty(1220);
+    await line('FLEUR / BLOSSOM ─────────────────────────────────────────────', 'system', 1300);
+    await line('  Agricultural. Seeds and food for all districts.', 'output', 1370);
+    await line('  Food distribution: <span style="color:#ff3333">HALTED PER DIRECTIVE 7-ALPHA</span>', 'warn', 1440);
+    await line('  Status: <span style="color:#cc8800">OPERATIONAL — AID SUSPENDED</span>', 'warn', 1510);
+    await empty(1600);
+    await line('<span style="color:#003a00;font-size:10px">// fleur still grows food. 214 operators are fed. the rest of the city is not.</span>', 'anomaly', 2100);
+    await line('<span style="color:#003a00;font-size:10px">// the walls between districts were built BEFORE the quarantine. STING planned this.</span>', 'anomaly', 2500);
+  },
+
+  'bunker': async () => {
+    await line('ACCESSING: /sys/military/bunker_intel.enc', 'output');
+    await line('Decrypting... GAMMA PARTIAL ACCESS', 'output', 400);
+    await empty(600);
+    await line('MILITARY BUNKER // NORTHERN PERIMETER', 'system', 700);
+    await line('──────────────────────────────────────────────', 'output', 780);
+    await line('ENTRY: 2x BLUE KEYCARD (1 per tower). Coordinate both swipes.', 'output', 860);
+    await line('      Gate cooldown: 5 min. Alarm: AUDIBLE CITYWIDE on open/close.', 'warn', 930);
+    await empty(1000);
+    await line('INTERIOR: Large pit of lava (central). Military NPCs patrol — respawn continuously.', 'output', 1100);
+    await line('LEFT WING: Multiple secured rooms. Some require special equipment.', 'output', 1170);
+    await line('RIGHT WING: Contraband Containment Facility.', 'output', 1240);
+    await line('  └─ 2x secured doors. Access: <span class="redacted">████████████</span>', 'warn', 1310);
+    await line('  └─ Each door: 1 secured crate + 1 Operator NPC guard. High threat.', 'warn', 1380);
+    await empty(1440);
+    await line('BUNKER LOCKERS: Special containers throughout main hallways. Access restricted.', 'output', 1520);
+    await empty(1580);
+    await line('WAVE DEFENSE (activate via terminal in contraband room — Red Keycard):', 'system', 1660);
+    await line('  └─ Exits seal. NPC waves commence.', 'output', 1720);
+    await line('  └─ Every few waves: 1 exit opens (60s), 4 vaults rise from floor.', 'output', 1790);
+    await line('  └─ Vault contents: <span class="redacted">[DATA EXPUNGED — CFLAB CLEARANCE REQUIRED]</span>', 'warn', 1860);
+    await line('  └─ After 60s: door closes, vaults lower, next wave begins.', 'output', 1930);
+    await empty(2000);
+    await line('GAS TUNNEL EXITS (while gate open, hatch accessible in checkpoint):', 'output', 2080);
+    await line('  SHORT  → Rebel cave area (northeast Sombre)', 'output', 2150);
+    await line('  STATION → Metro Station', 'output', 2210);
+    await line('  LONG   → Bunker offload wall', 'output', 2270);
+    await empty(2340);
+    await line('<span style="color:#cc9944;font-size:11px">// WICK: they recruit BD test subjects via Bounty Hunter Program Clause 9.</span>', 'anomaly', 2900);
+    await line('<span style="color:#cc9944;font-size:11px">// they make promises down here. do not take them. — V</span>', 'anomaly', 3300);
+  },
+
+  'inhalers': async () => {
+    await line('ACCESSING: /sys/lab/combat_inhaler_registry.enc', 'output');
+    await line('<span style="color:#ff3333">⚠ FILE PARTIALLY CORRUPTED</span>', 'warn', 500);
+    await empty(700);
+    await line('COMBAT INHALER REGISTRY — MANUFACTURER: THE RELEASERS', 'system', 800);
+    await line('──────────────────────────────────────────────', 'output', 880);
+    await line('PURPLE  — [effects redacted]  LD50: <span class="redacted">████████</span>', 'output', 960);
+    await line('ORANGE  — [effects redacted]  LD50: <span class="redacted">████████</span>', 'output', 1030);
+    await line('BLUE    — neural suppression. disables higher cognition. used in BD trials.', 'warn', 1100);
+    await line('RED     — [effects redacted]  LD50: <span class="redacted">████████</span>', 'output', 1170);
+    await empty(1240);
+    await line('STING STATUS: aware of Releaser supply chain. Source: <span class="redacted">[DATA EXPUNGED]</span>', 'warn', 1320);
+    await empty(1400);
+    await line('<span style="color:#cc9944;font-size:11px">// vandal: all four colors are poison. the Releasers do not make medicine.</span>', 'anomaly', 1900);
+    await line('<span style="color:#cc9944;font-size:11px">// blue is what they use to keep the BD subjects "compliant". he was blinking. — V</span>', 'anomaly', 2300);
+  },
+
+  'scrappers': async () => {
+    await line('ACCESSING: /sys/underground/scrapper_network.enc', 'output');
+    await empty(400);
+    await line('SCRAPPERS // METRO TUNNEL NETWORK', 'system', 600);
+    await line('Location: Metro tunnels beneath Sombre District.', 'output', 700);
+    await line('Subsistence: salvaged hardware, scrap relay nodes.', 'output', 780);
+    await line('SCOURGE: arena master. Hosts death matches.', 'warn', 860);
+    await line('  └─ Grand prize: RENDBREAKER (motorized chainsaw great-sword)', 'output', 930);
+    await line('  └─ Arena opponent: SCRAP OPERATOR (rogue robot anomaly)', 'danger', 1000);
+    await empty(1060);
+    await line('SHELTERING: WICK (ex-STING) + VANDAL (hacker, 0x4F3A)', 'warn', 1140);
+    await line('Scrappers maintain relay nodes — this terminal runs on one.', 'output', 1220);
+    await empty(1300);
+    await line('<span class="zalgo" style="color:#00ccaa;font-size:11px">// i am the relay. scourge thinks i am infrastructure. i am more.</span>', 'anomaly', 1800);
+    await line('<span style="color:#00ccaa;font-size:11px">// rendbreaker is real. i watched seventeen people die for it. scourge keeps score.</span>', 'anomaly', 2200);
+  },
+};
+
+const catchallResponses = [
+  async (cmd) => {
+    await line(`Command not found: ${cmd}`, 'error');
+    await line('Type <span style="color:#00ff41">help</span> for available commands.', 'output', 200);
+    await empty(400);
+    await line(`<span style="color:#002a00;font-size:11px">// that command does not exist in their system.</span>`, 'anomaly', 1000);
+    await line(`<span style="color:#002a00;font-size:11px">// but i heard you. i hear everything typed on this node.</span>`, 'anomaly', 1400);
+  },
+  async (cmd) => {
+    await line(`bash: ${cmd}: command not found`, 'error');
+    await empty(400);
+    await line(`<span class="zalgo" style="opacity:0.4;font-size:11px;color:#003322">c̷o̴m̸m̷a̸n̶d̷ ̸n̷o̴t̸ ̵f̸o̵u̵n̴d̷ ̵c̷o̵m̵m̷a̶n̷d̵ ̸n̸o̷t̵ ̷f̵o̶u̶n̶d̶</span>`, 'anomaly', 1200);
+    await line(`<span style="color:#002a00;font-size:11px">// but YOU were found. i see your terminal ID. welcome, newcomer.</span>`, 'anomaly', 1700);
+  },
+  async (cmd) => {
+    await line(`ERROR: '${cmd}' is not recognized as an internal or external command.`, 'error');
+    await empty(300);
+    await line(`<span style="color:#003300;font-size:11px">// pager's command list is incomplete anyway.</span>`, 'anomaly', 1000);
+    await line(`<span style="color:#003300;font-size:11px">// try: who  find  map  nightbound  flare  sectors</span>`, 'anomaly', 1300);
+  }
+];
+
+let catchallIndex = 0;
+
+async function handleInput(raw) {
+  if (inputLocked) return;
+  if (!raw.trim()) return;
+
+  inputLocked = true;
+
+  cmdHistory.unshift(raw);
+  historyIndex = -1;
+
+  await line(`<span class="prompt-symbol">anomaly@0x4d454e53:~$</span> <span class="user-cmd">${raw}</span>`, 'prompt-line');
+  await empty();
+
+  const cmd = raw.trim().toLowerCase();
+
+  if (commands[cmd]) {
+    await commands[cmd](raw.split(' ').slice(1).join(' '));
+  } else {
+    const resp = catchallResponses[catchallIndex % catchallResponses.length];
+    catchallIndex++;
+    await resp(cmd);
+  }
+
+  await empty();
+  inputLocked = false;
+  inp.focus();
+}
+
+inp.addEventListener('keydown', async (e) => {
+  if (e.key === 'Enter') {
+    const val = inp.value;
+    inp.value = '';
+    await handleInput(val);
+  }
+  if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (historyIndex < cmdHistory.length - 1) {
+      historyIndex++;
+      inp.value = cmdHistory[historyIndex];
+    }
+  }
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    if (historyIndex > 0) {
+      historyIndex--;
+      inp.value = cmdHistory[historyIndex];
+    } else {
+      historyIndex = -1;
+      inp.value = '';
+    }
+  }
+});
+
+let seconds = 0;
+setInterval(() => {
+  seconds++;
+  const h = String(Math.floor(seconds / 3600)).padStart(2,'0');
+  const m = String(Math.floor((seconds % 3600) / 60)).padStart(2,'0');
+  const s = String(seconds % 60).padStart(2,'0');
+  document.getElementById('uptime').textContent = `${h}:${m}:${s}`;
+  document.getElementById('procCount').textContent = Math.floor(Math.random() * 3 + 16);
+}, 1000);
+
+setInterval(async () => {
+  if (inputLocked) return;
+  const r = Math.random();
+  if (r < 0.015) {
+    inputLocked = true;
+    await line(`<span class="zalgo" style="opacity:0.25;font-size:10px;color:#002211">l̷u̵n̵a̸r̷_̴r̷o̵t̸_̸s̵i̷g̸n̷a̸l̶.̶e̷x̴e̷ ̸r̴u̸n̸n̸i̸n̵g̴</span>`, 'anomaly');
+    out.scrollTop = out.scrollHeight;
+    inputLocked = false;
+  }
+}, 8000);
+
+bootSequence();
+</script>
+</body>
+</html>
