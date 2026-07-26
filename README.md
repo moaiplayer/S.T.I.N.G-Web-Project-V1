@@ -23,3 +23,5 @@ For Plus:
 The only reason I created these websites is because I love this game, and I did so in the hope that I might be able to contribute something to it.
 If the code not working or if it doesn't fit the lore of the Blackout: Revival
 i am sorry. In the future i will improve the website and I'll make sure it fits with the Blackout: Revival's lore.
+
+Edit: I will be not be improving this project anymore i have other things to work on
